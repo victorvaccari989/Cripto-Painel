@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1220">
+<title>CriptoPainel — Gráficos de criptomoedas</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#111b2d;--line:#26354b;--text:#edf3fc;--muted:#91a2ba;--accent:#58a6ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.brand{font-size:20px;font-weight:800}.brand span{color:var(--accent)}.sub{color:var(--muted);font-size:12px;margin-top:3px}
+main{max-width:1200px;margin:auto;padding:18px;display:grid;gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,button{background:#17243a;color:var(--text);border:1px solid #344760;border-radius:9px;padding:10px 12px;font:inherit}
+button{cursor:pointer}button.active,button:hover{border-color:var(--accent);background:#1a3454}
+.quote{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin:16px 0 4px}
+#price{font-size:clamp(25px,5vw,36px);font-weight:800;letter-spacing:-1px}#change{font-weight:700}.muted{color:var(--muted)}
+#chart{height:430px;width:100%;margin-top:12px}.status{font-size:12px;color:var(--muted);padding-top:10px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.coin{background:#0d1727;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:left;width:100%}
+.coin strong{display:block}.coin small{color:var(--muted)}.coin .coinprice{display:block;margin-top:8px;font-size:16px;font-weight:700}
+h2{font-size:15px;margin:0 0 12px}.footer{color:var(--muted);font-size:12px;line-height:1.5;padding:0 4px}
+@media(max-width:650px){main{padding:10px}header{padding:14px}#chart{height:340px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{padding:11px}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">₿ <span>Cripto</span>Painel</div><div class="sub">Gráficos e cotações de criptomoedas</div></div><div class="toolbar"><span class="muted">Mercado</span><strong>Cripto</strong></div></header>
+<main>
+<section class="panel">
+<div class="toolbar">
+<select id="symbol" aria-label="Escolher criptomoeda">
+<option value="BTCUSDT">Bitcoin (BTC/USDT)</option><option value="ETHUSDT">Ethereum (ETH/USDT)</option><option value="SOLUSDT">Solana (SOL/USDT)</option><option value="BNBUSDT">BNB (BNB/USDT)</option><option value="XRPUSDT">XRP (XRP/USDT)</option><option value="DOGEUSDT">Dogecoin (DOGE/USDT)</option><option value="ADAUSDT">Cardano (ADA/USDT)</option><option value="LTCUSDT">Litecoin (LTC/USDT)</option>
+</select>
+<div class="toolbar" id="intervals">
+<button data-interval="1m" class="active">1m</button><button data-interval="5m">5m</button><button data-interval="15m">15m</button><button data-interval="30m">30m</button><button data-interval="1h">1h</button><button data-interval="4h">4h</button><button data-interval="12h">12h</button><button data-interval="1d">1D</button>
+</div>
+</div>
+<div class="quote"><span id="price">Carregando…</span><span id="change" class="muted">—</span></div>
+<div class="muted" id="pair">BTC/USDT · dados da Binance</div>
+<div id="chart"></div><div class="status" id="status">Conectando à fonte de dados…</div>
+</section>
+<section class="panel"><h2>Mercados em destaque · toque para abrir o gráfico</h2>
+<div class="grid" id="watchlist">
+<button class="coin" data-symbol="BTCUSDT"><strong>Bitcoin · BTC</strong><small>BTC/USDT</small><span class="coinprice">Carregando…</span></button>
+<button class="coin" data-symbol="ETHUSDT"><strong>Ethereum · ETH</strong><small>ETH/USDT</small><span class="coinprice">Carregando…</span></button>
+<button class="coin" data-symbol="SOLUSDT"><strong>Solana · SOL</strong><small>SOL/USDT</small><span class="coinprice">Carregando…</span></button>
+<button class="coin" data-symbol="BNBUSDT"><strong>BNB</strong><small>BNB/USDT</small><span class="coinprice">Carregando…</span></button>
+<button class="coin" data-symbol="XRPUSDT"><strong>XRP</strong><small>XRP/USDT</small><span class="coinprice">Carregando…</span></button>
+<button class="coin" data-symbol="DOGEUSDT"><strong>Dogecoin · DOGE</strong><small>DOGE/USDT</small><span class="coinprice">Carregando…</span></button>
+</div></section>
+<p class="footer">Protótipo inicial. Os preços são cotados em USDT pela API pública da Binance; USDT não é BRL. A disponibilidade da API pode variar. RSI, MACD, médias móveis e alertas ainda precisam ser adicionados em uma próxima versão. Não é recomendação de investimento.</p>
+</main>
+<script>
+(() => {
+const $=id=>document.getElementById(id), chartEl=$('chart');
+if(!window.LightweightCharts){$('status').textContent='Não foi possível carregar a biblioteca de gráficos. Verifique a conexão e recarregue.';return}
+const chart=LightweightCharts.createChart(chartEl,{width:chartEl.clientWidth,height:chartEl.clientHeight,layout:{background:{color:'#111b2d'},textColor:'#b8c7dc'},grid:{vertLines:{color:'#1c2a40'},horzLines:{color:'#1c2a40'}},rightPriceScale:{borderColor:'#344760'},timeScale:{borderColor:'#344760',timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+const candles=chart.addCandlestickSeries({upColor:'#26a69a',downColor:'#ef5350',borderUpColor:'#26a69a',borderDownColor:'#ef5350',wickUpColor:'#26a69a',wickDownColor:'#ef5350'});
+let symbol='BTCUSDT',interval='1m',requestId=0;
+const money=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8});
+const label=s=>s.replace('USDT','/USDT');
+async function loadChart(){const id=++requestId;$('status').textContent='Atualizando gráfico…';$('pair').textContent=label(symbol)+' · dados da Binance';
+try{const r=await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`);if(!r.ok)throw new Error('fonte de dados: '+r.status);const rows=await r.json();if(id!==requestId)return;
+candles.setData(rows.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]})));chart.timeScale().fitContent();
+const last=rows[rows.length-1],first=rows[0],pct=((+last[4]-+first[1]) / +first[1])*100;
+$('price').textContent=money(+last[4])+' USDT';$('change').textContent=`${pct>=0?'+':''}${pct.toFixed(2)}% no período exibido`;$('change').style.color=pct>=0?'#26a69a':'#ef5350';$('status').textContent='Gráfico atualizado · período '+interval+'.';
+}catch(e){if(id!==requestId)return;$('status').textContent='Não foi possível carregar os dados. Tente novamente. ('+e.message+')'}}
+async function loadWatchlist(){for(const el of document.querySelectorAll('.coin')){try{const r=await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${el.dataset.symbol}`);if(!r.ok)throw Error();const d=await r.json();el.querySelector('.coinprice').textContent=money(+d.price)+' USDT'}catch{el.querySelector('.coinprice').textContent='Indisponível'}}}
+$('symbol').addEventListener('change',e=>{symbol=e.target.value;loadChart()});
+document.querySelectorAll('[data-interval]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-interval]').forEach(x=>x.classList.remove('active'));b.classList.add('active');interval=b.dataset.interval;loadChart()}));
+document.querySelectorAll('.coin').forEach(b=>b.addEventListener('click',()=>{symbol=b.dataset.symbol;$('symbol').value=symbol;loadChart();window.scrollTo({top:0,behavior:'smooth'})}));
+new ResizeObserver(()=>chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight})).observe(chartEl);
+loadChart();loadWatchlist();setInterval(()=>{loadChart();loadWatchlist()},60000);
+})();
+</script>
+</body></html>
