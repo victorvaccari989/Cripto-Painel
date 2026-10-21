@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050609">
+<title>CriptoPainel</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#050609;--panel:#101319;--line:#252a34;--muted:#9298a5;--text:#f2f4f8;--green:#19b995;--red:#f05268;--blue:#386bff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,select{font:inherit;color:inherit;background:#171b23;border:1px solid #303642;border-radius:9px;padding:9px 11px}
+button{cursor:pointer}button:active{transform:scale(.98)}.top{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#050609;z-index:5}
+.brand{font-weight:800;font-size:18px;display:flex;gap:8px;align-items:center}.coinmark{background:#f7931a;color:white;border-radius:50%;width:27px;height:27px;display:inline-grid;place-items:center;font-weight:900}
+.nav{display:flex;gap:8px}.nav button{border:0;background:transparent;color:var(--muted)}.nav button.active{color:white;background:#202530}
+.page{display:none}.page.active{display:block}.watchhead{padding:16px 14px 8px;display:flex;align-items:center;justify-content:space-between}.sub{color:var(--muted);font-size:12px}.coinrow{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:11px;align-items:center;padding:12px 14px;border-bottom:1px solid #20232b;cursor:pointer}.coinrow:active{background:#141821}.icon{height:36px;width:36px;border-radius:50%;display:grid;place-items:center;background:#1b2432;font-weight:800;font-size:15px}.coinname{font-weight:700}.ticker{font-size:12px;color:var(--muted);margin-top:3px}.price{text-align:right;font-weight:700}.change{font-size:12px;margin-top:3px;text-align:right}.positive{color:var(--green)}.negative{color:var(--red)}
+.charthead{padding:12px 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px}.pair{font-size:16px;font-weight:800}.pricebig{font-size:12px;color:var(--muted);margin-top:4px}.controls{display:flex;gap:6px;align-items:center;overflow:auto;padding:0 12px 10px;scrollbar-width:none}.controls button{white-space:nowrap;padding:7px 10px;font-size:12px}.controls button.active{background:#254bba;border-color:#416cff}.chartbox{height:52vh;min-height:330px;position:relative;margin:0 4px}.chartstatus{padding:8px 14px;color:var(--muted);font-size:12px}.drawtools{display:flex;gap:7px;overflow:auto;padding:10px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.drawtools button{white-space:nowrap;font-size:12px}.drawtools button.active{border-color:#5e8bff;background:#1b2b4e}.bottomnav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;background:#08090d;border-top:1px solid var(--line);padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10}.bottomnav button{background:none;border:0;display:grid;gap:4px;justify-items:center;color:var(--muted);font-size:10px;padding:4px}.bottomnav button.active{color:white}.bottomnav span:first-child{font-size:19px}.spacer{height:70px}.note{padding:12px 14px;color:var(--muted);font-size:12px;line-height:1.5}.menu{position:relative}.menu select{max-width:105px}.error{color:#ffb3bd}.smallbtn{padding:7px 9px}
+@media(min-width:800px){body{max-width:900px;margin:auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}.chartbox{height:560px}.coinrow{padding-left:22px;padding-right:22px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="coinmark">₿</span><span>CriptoPainel</span></div>
+  <div class="nav"><button id="navWatch" class="active" onclick="showPage('watch')">Observação</button><button id="navChart" onclick="showPage('chart')">Gráfico</button></div>
+</header>
+
+<main>
+<section id="watchPage" class="page active">
+  <div class="watchhead"><div><strong>Lista de observação</strong><div class="sub">Mercado cripto · USDT</div></div><button onclick="refreshWatch()">↻ Atualizar</button></div>
+  <div id="watchList"></div>
+  <p class="note">Toque em uma criptomoeda para abrir o gráfico. As cotações são consultadas na API pública da Binance e podem não estar disponíveis em todas as redes.</p>
+</section>
+
+<section id="chartPage" class="page">
+  <div class="charthead">
+    <div><div class="pair" id="pairTitle">BTCUSDT · Bitcoin</div><div class="pricebig" id="pairPrice">Carregando cotação…</div></div>
+    <select id="symbolSelect" aria-label="Escolher criptomoeda" onchange="changeSymbol(this.value)">
+      <option value="BTCUSDT">BTC/USDT</option><option value="ETHUSDT">ETH/USDT</option><option value="SOLUSDT">SOL/USDT</option><option value="XRPUSDT">XRP/USDT</option><option value="BNBUSDT">BNB/USDT</option><option value="ADAUSDT">ADA/USDT</option><option value="DOGEUSDT">DOGE/USDT</option><option value="LINKUSDT">LINK/USDT</option><option value="NEARUSDT">NEAR/USDT</option><option value="FETUSDT">FET/USDT</option>
+    </select>
+  </div>
+  <div class="controls" id="intervals">
+    <button data-i="1m" class="active">1m</button><button data-i="2m">2m</button><button data-i="3m">3m</button><button data-i="5m">5m</button><button data-i="15m">15m</button><button data-i="30m">30m</button><button data-i="1h">1h</button><button data-i="2h">2h</button><button data-i="3h">3h</button><button data-i="4h">4h</button><button data-i="6h">6h</button><button data-i="12h">12h</button><button data-i="1d">1D</button><button data-i="2d">2D</button><button data-i="3d">3D</button><button data-i="4d">4D</button><button data-i="1w">1S</button><button data-i="1M">1Mês</button>
+  </div>
+  <div id="chart" class="chartbox"></div>
+  <div class="chartstatus" id="status">Conectando aos dados do mercado…</div>
+  <div class="drawtools">
+    <button id="drawLine" onclick="setDrawMode('line')">✏️ Linha de tendência</button>
+    <button id="drawH" onclick="setDrawMode('horizontal')">— Linha horizontal</button>
+    <button onclick="clearDrawings()">Limpar desenhos</button>
+  </div>
+  <div class="controls"><button onclick="showPage('watch')">← Lista de observação</button><span class="sub">Toque duas vezes no gráfico não é necessário; escolha uma ferramenta e toque em dois pontos.</span></div>
+  <p class="note">Os intervalos 2m, 3m, 2D, 3D e 4D são montados a partir de velas menores. A linha de tendência e a horizontal são desenhos básicos deste protótipo; recursos avançados como Fibonacci, canais e ondas de Elliott ainda precisam ser implementados.</p>
+</section>
+</main>
+<div class="spacer"></div>
+<nav class="bottomnav">
+  <button id="bottomWatch" class="active" onclick="showPage('watch')"><span>▤</span><span>Observação</span></button>
+  <button id="bottomChart" onclick="showPage('chart')"><span>⌁</span><span>Gráfico</span></button>
+  <button onclick="showPage('watch')"><span>◎</span><span>Mercado</span></button>
+  <button onclick="alert('Comunidade: em desenvolvimento.')"><span>♧</span><span>Comunidade</span></button>
+  <button onclick="alert('Mais opções serão adicionadas nas próximas versões.')"><span>☰</span><span>Menu</span></button>
+</nav>
+
+<script>
+const API='https://api.binance.com/api/v3';
+const names={BTCUSDT:'Bitcoin',ETHUSDT:'Ethereum',SOLUSDT:'Solana',XRPUSDT:'XRP',BNBUSDT:'BNB',ADAUSDT:'Cardano',DOGEUSDT:'Dogecoin',LINKUSDT:'Chainlink',NEARUSDT:'NEAR',FETUSDT:'Fetch.ai'};
+const colors={BTCUSDT:'#f7931a',ETHUSDT:'#627eea',SOLUSDT:'#6d5cff',XRPUSDT:'#7d8794',BNBUSDT:'#f3ba2f',ADAUSDT:'#3468d4',DOGEUSDT:'#c2a633',LINKUSDT:'#2a5ada',NEARUSDT:'#00c08b',FETUSDT:'#3c4dff'};
+let symbol='BTCUSDT', interval='1m', chart=null, candleSeries=null, drawMode=null, pendingPoint=null, drawings=[];
+const $=id=>document.getElementById(id);
+function showPage(which){
+  $('watchPage').classList.toggle('active',which==='watch');$('chartPage').classList.toggle('active',which==='chart');
+  ['navWatch','bottomWatch'].forEach(id=>$(id).classList.toggle('active',which==='watch'));
+  ['navChart','bottomChart'].forEach(id=>$(id).classList.toggle('active',which==='chart'));
+  if(which==='chart'&&!chart) initChart();
+  if(which==='chart'&&chart) setTimeout(()=>chart.applyOptions({width:$('chart').clientWidth}),80);
+}
+function fmt(n){return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:8})}
+async function refreshWatch(){
+  $('watchList').innerHTML='<p class="note">Atualizando cotações…</p>';
+  try{
+    const res=await fetch(API+'/ticker/24hr');if(!res.ok)throw new Error('HTTP '+res.status);
+    const all=await res.json();
+    const rows=Object.keys(names).map(s=>all.find(x=>x.symbol===s)).filter(Boolean);
+    $('watchList').innerHTML=rows.map(t=>{
+      const positive=Number(t.priceChangePercent)>=0;
+      return `<div class="coinrow" onclick="changeSymbol('${t.symbol}');showPage('chart')">
+        <div class="icon" style="background:${colors[t.symbol]||'#222'}">${t.symbol==='BTCUSDT'?'₿':t.symbol.slice(0,1)}</div>
+        <div><div class="coinname">${t.symbol}</div><div class="ticker">${names[t.symbol]} / TetherUS</div></div>
+        <div><div class="price">${fmt(t.lastPrice)}</div><div class="change ${positive?'positive':'negative'}">${positive?'+':''}${Number(t.priceChangePercent).toLocaleString('pt-BR',{maximumFractionDigits:2})}%</div></div>
+      </div>`;
+    }).join('');
+  }catch(e){$('watchList').innerHTML='<p class="note error">Não foi possível carregar as cotações. Verifique a conexão e tente novamente.</p>'}
+}
+function initChart(){
+  if(!window.LightweightCharts){$('status').textContent='A biblioteca do gráfico não carregou. Verifique a conexão.';return}
+  chart=LightweightCharts.createChart($('chart'),{width:$('chart').clientWidth,height:$('chart').clientHeight,layout:{background:{color:'#050609'},textColor:'#9298a5'},grid:{vertLines:{color:'#171b23'},horzLines:{color:'#171b23'}},rightPriceScale:{borderColor:'#303642'},timeScale:{borderColor:'#303642',timeVisible:true,secondsVisible:false},crosshair:{mode:LightweightCharts.CrosshairMode.Normal}});
+  candleSeries=chart.addCandlestickSeries({upColor:'#19b995',downColor:'#f05268',borderUpColor:'#19b995',borderDownColor:'#f05268',wickUpColor:'#19b995',wickDownColor:'#f05268'});
+  chart.subscribeClick(handleChartClick);
+  new ResizeObserver(()=>{if(chart)chart.applyOptions({width:$('chart').clientWidth,height:$('chart').clientHeight})}).observe($('chart'));
+  loadCandles();
+}
+function intervalConfig(i){
+  const map={'1m':['1m',1],'2m':['1m',2],'3m':['1m',3],'5m':['5m',1],'15m':['15m',1],'30m':['30m',1],'1h':['1h',1],'2h':['2h',1],'3h':['1h',3],'4h':['4h',1],'6h':['6h',1],'12h':['12h',1],'1d':['1d',1],'2d':['1d',2],'3d':['1d',3],'4d':['1d',4],'1w':['1w',1],'1M':['1M',1]};
+  return map[i]||['1m',1];
+}
+function aggregate(data,n,unitMs){
+  if(n===1)return data;
+  const groups=new Map();
+  for(const c of data){
+    const bucket=Math.floor(c.time/(unitMs*n))*(unitMs*n);
+    if(!groups.has(bucket))groups.set(bucket,{time:bucket,open:c.open,high:c.high,low:c.low,close:c.close});
+    else{const g=groups.get(bucket);g.high=Math.max(g.high,c.high);g.low=Math.min(g.low,c.low);g.close=c.close}
+  }
+  return [...groups.values()];
+}
+async function loadCandles(){
+  if(!candleSeries)return;
+  $('status').textContent='Carregando velas de '+symbol+'…';
+  const [base,mult]=intervalConfig(interval);
+  try{
+    const limit=(mult>1&&base==='1m')?1000:500;
+    const r=await fetch(`${API}/klines?symbol=${symbol}&interval=${base}&limit=${limit}`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    let data=(await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+    if(mult>1){
+      let unit=60000;
+      if(base==='1d')unit=86400000;
+      if(base==='1h')unit=3600000;
+      data=aggregate(data,mult,unit);
+    }
+    candleSeries.setData(data);chart.timeScale().fitContent();
+    const p=await fetch(`${API}/ticker/price?symbol=${symbol}`).then(x=>x.json());
+    $('pairTitle').textContent=symbol+' · '+(names[symbol]||symbol);
+    $('pairPrice').textContent='Preço atual: '+fmt(p.price)+' USDT';
+    $('status').textContent='Dados recebidos da Binance · '+data.length+' velas carregadas.';
+  }catch(e){$('status').textContent='Não foi possível carregar o gráfico. Verifique a conexão ou tente novamente.'}
+}
+function changeSymbol(s){symbol=s;$('symbolSelect').value=s;$('pairTitle').textContent=s+' · '+(names[s]||s);showPage('chart');if(candleSeries)loadCandles()}
+document.querySelectorAll('[data-i]').forEach(b=>b.addEventListener('click',()=>{interval=b.dataset.i;document.querySelectorAll('[data-i]').forEach(x=>x.classList.toggle('active',x===b));drawMode=null;pendingPoint=null;if(candleSeries)loadCandles()}));
+function setDrawMode(mode){drawMode=mode;pendingPoint=null;$('drawLine').classList.toggle('active',mode==='line');$('drawH').classList.toggle('active',mode==='horizontal');$('status').textContent=mode==='line'?'Linha de tendência: toque em dois pontos do gráfico.':'Linha horizontal: toque no nível de preço desejado.'}
+function handleChartClick(param){
+  if(!drawMode||!param.point||!param.time)return;
+  const price=candleSeries.coordinateToPrice(param.point.y);if(price===null)return;
+  if(drawMode==='horizontal'){
+    const line=candleSeries.createPriceLine({price,color:'#f5c542',lineWidth:2,lineStyle:LightweightCharts.LineStyle.Solid,axisLabelVisible:true,title:'Nível'});
+    drawings.push({type:'price',obj:line});drawMode=null;$('drawH').classList.remove('active');$('status').textContent='Linha horizontal adicionada.';return;
+  }
+  const point={time:param.time,price};
+  if(!pendingPoint){pendingPoint=point;$('status').textContent='Agora toque no segundo ponto da linha.';return}
+  const series=chart.addLineSeries({color:'#f5c542',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
+  series.setData([pendingPoint,point].sort((a,b)=>a.time-b.time));drawings.push({type:'line',obj:series});
+  pendingPoint=null;drawMode=null;$('drawLine').classList.remove('active');$('status').textContent='Linha de tendência adicionada.';
+}
+function clearDrawings(){for(const d of drawings){try{if(d.type==='price')candleSeries.removePriceLine(d.obj);else chart.removeSeries(d.obj)}catch(e){}}drawings=[];$('status').textContent='Desenhos removidos.'}
+refreshWatch();setInterval(refreshWatch,60000);
+</script>
+</body>
+</html>
